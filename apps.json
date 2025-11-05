@@ -1,0 +1,6 @@
+[
+  { "id": "notes", "name": "Notes", "icon": "📝", "kind": "notes" },
+  { "id": "clock", "name": "Clock", "icon": "🕒", "kind": "clock" },
+  { "id": "calc", "name": "Calculator", "icon": "🧮", "kind": "calc" },
+  { "id": "about", "name": "About", "icon": "ℹ️", "kind": "about" }
+]

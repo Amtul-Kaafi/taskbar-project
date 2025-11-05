@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Taskbar</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div id="desktop"></div>
+
+  <div id="start-menu" class="hidden">
+    <div class="start-menu-header">Apps</div>
+    <ul id="start-menu-list"></ul>
+  </div>
+
+  <div id="taskbar">
+    <button id="start-button" aria-expanded="false">
+      <span class="start-glyph">⊞</span> Start
+    </button>
+    <div id="task-buttons"></div>
+    <div id="tray">
+      <span id="clock">--:--:--</span>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
