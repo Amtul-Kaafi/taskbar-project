@@ -1,34 +1,122 @@
 # taskbar-project
 
-A simple desktop-style **taskbar** application built on Node.js — no npm dependencies, no build step.
+A simple desktop-style **taskbar** application built on Node.js — no npm dependencies, no build step —
+packaged as a Docker image and run as a two-service stack with Docker Compose.
 
 A small Node HTTP server serves a browser desktop shell: a Start menu, draggable app windows,
-per-window taskbar buttons with minimize/restore, and a live clock in the tray.
+per-window taskbar buttons with minimize/restore, and a live clock in the tray. An nginx reverse
+proxy sits in front of it on a user-defined bridge network, and notes are persisted to a named volume.
 
-## Run it
+## Run with Docker Compose
+
+```bash
+docker compose up -d --build
+```
+
+| URL | What it is |
+| --- | --- |
+| <http://localhost:8080> | Through the nginx reverse proxy (the normal entry point) |
+| <http://localhost:3000> | Straight at the app container |
+| <http://localhost:8080/healthz> | Proxy liveness, answered by nginx itself |
+| <http://localhost:3000/api/health> | App health, used by the container healthcheck |
+
+Stop the stack, keeping saved notes:
+
+```bash
+docker compose down
+```
+
+Stop it and throw the notes away too:
+
+```bash
+docker compose down -v
+```
+
+## Run without Docker
 
 ```bash
 npm start
 ```
 
-Then open <http://localhost:3000>. Set `PORT` to use a different port.
+## Container layout
+
+```
+host :8080 ──> proxy (nginx)  ──┐
+host :3000 ─────────────────────┴──> web (node) ──> taskbar-data volume at /data
+                    taskbar-net (bridge)
+```
+
+- **web** — the Node app, built from the `Dockerfile`, published as `taskbar-app:1.0.0`.
+  Runs as the unprivileged `node` user with a `HEALTHCHECK` against `/api/health`.
+- **proxy** — `nginx:1.27-alpine`, reaching the app as `http://web:3000`. The hostname `web`
+  resolves through Docker's embedded DNS on `taskbar-net`; nothing is hard-coded to an IP.
+- **taskbar-net** — a user-defined bridge network, so the two services can talk by service name.
+- `depends_on: condition: service_healthy` holds the proxy back until the app passes its healthcheck.
+
+## Environment configuration
+
+Compose reads `.env` if it is present. Copy the sample and edit:
+
+```bash
+cp .env.example .env
+```
+
+| Variable | Default | Effect |
+| --- | --- | --- |
+| `APP_PORT` | `3000` | Host port mapped to the app container |
+| `PROXY_PORT` | `8080` | Host port mapped to nginx |
+| `TASKBAR_TITLE` | `Taskbar` | Browser tab title, reported by `GET /api/config` |
+| `PORT` | `3000` | Port the Node server binds inside the container |
+| `HOST` | `0.0.0.0` | Bind address — must not be `127.0.0.1` in a container |
+| `DATA_DIR` | `/data` | Where notes are written; the volume mount point |
+| `APPS_FILE` | `/app/apps.json` | Start-menu definition |
+
+A one-off override without touching any file:
+
+```bash
+TASKBAR_TITLE="My Desktop" docker compose up -d --force-recreate web
+```
+
+## Storage
+
+- **Named volume `taskbar-data` → `/data`** — the Notes app writes `notes.json` here through
+  `PUT /api/notes`. It survives `docker compose down`, container recreation and image rebuilds.
+- **Bind mount `./apps.json` → `/app/apps.json:ro`** — edit the Start menu on the host and
+  restart the service; the file is read-only inside the container.
+
+Inspect what is stored:
+
+```bash
+docker compose exec web cat /data/notes.json
+```
+
+## HTTP API
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/health` | `{ status, host, uptime }` — used by the healthcheck |
+| `GET` | `/api/config` | `{ title, host, dataDir, node }` — which container served you |
+| `GET` | `/api/apps` | Start-menu entries, read from `apps.json` |
+| `GET` | `/api/notes` | `{ text, savedAt }` from the volume |
+| `PUT` | `/api/notes` | Body `{ "text": "..." }`, written atomically |
 
 ## What's in it
 
 | Path | Purpose |
 | --- | --- |
-| `server.js` | Zero-dependency HTTP server: static files from `public/`, plus `GET /api/apps` |
+| `server.js` | Zero-dependency HTTP server: static files, JSON API, graceful SIGTERM |
+| `Dockerfile` | Image build: `node:22-alpine`, non-root user, healthcheck |
+| `docker-compose.yml` | Two services, one bridge network, one named volume |
+| `nginx/default.conf` | Reverse proxy to `web:3000`, plus `/healthz` |
 | `apps.json` | The list of apps shown in the Start menu |
-| `public/index.html` | Desktop, taskbar and start-menu markup |
-| `public/style.css` | Taskbar, window and start-menu styling |
-| `public/app.js` | Window manager: open, focus, drag, minimize, close |
+| `public/` | Desktop markup, styling, and the window manager |
 
 ## Built-in apps
 
-- **Notes** — a scratch text area
+- **Notes** — text saved to the volume, so it survives restarts
 - **Clock** — large ticking clock and full date
 - **Calculator** — left-to-right arithmetic (no `eval`)
-- **About** — what this project is
+- **About** — shows the container that served the page, Node version and data directory
 
 ## Adding an app
 
