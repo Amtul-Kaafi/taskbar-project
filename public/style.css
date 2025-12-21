@@ -29,6 +29,7 @@ body {
 .window {
   position: absolute;
   min-width: 260px;
+  max-width: 420px;
   background: var(--window-bg);
   color: var(--window-text);
   border-radius: 8px;
@@ -244,3 +245,53 @@ body {
 }
 
 #start-menu button:hover { background: #313a52; }
+
+/* --- notes + about extras --- */
+
+.notes-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.notes-row button.primary {
+  border: 0;
+  border-radius: 6px;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  padding: 7px 14px;
+  cursor: pointer;
+}
+
+.notes-row button.primary:hover { filter: brightness(1.08); }
+
+.notes-status {
+  font-size: 12px;
+  color: #5b6379;
+}
+
+dl.facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  margin: 10px 0 0;
+  font-size: 13px;
+}
+
+dl.facts dt { color: #5b6379; }
+dl.facts dd { margin: 0; font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; }
+
+#host-badge {
+  margin-right: 10px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #2b3243;
+  color: #9fb3d9;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 11px;
+}
+
+#host-badge:empty { display: none; }

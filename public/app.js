@@ -6,6 +6,7 @@ const startButton = document.getElementById('start-button');
 const startMenu = document.getElementById('start-menu');
 const startMenuList = document.getElementById('start-menu-list');
 const clock = document.getElementById('clock');
+const hostBadge = document.getElementById('host-badge');
 
 const windows = new Map();
 let nextId = 1;
@@ -18,7 +19,47 @@ function notesBody() {
   const wrap = document.createElement('div');
   const area = document.createElement('textarea');
   area.placeholder = 'Type something...';
-  wrap.appendChild(area);
+
+  const row = document.createElement('div');
+  row.className = 'notes-row';
+
+  const save = document.createElement('button');
+  save.className = 'primary';
+  save.textContent = 'Save';
+
+  const status = document.createElement('span');
+  status.className = 'notes-status';
+  status.textContent = 'Loading...';
+
+  row.append(save, status);
+  wrap.append(area, row);
+
+  // Notes live in DATA_DIR on the server, which is a mounted volume in Docker,
+  // so they survive `docker compose down` and come back on the next start.
+  fetch('/api/notes')
+    .then((res) => res.json())
+    .then((notes) => {
+      area.value = notes.text || '';
+      status.textContent = notes.savedAt
+        ? 'Saved ' + new Date(notes.savedAt).toLocaleString()
+        : 'Not saved yet';
+    })
+    .catch(() => { status.textContent = 'Could not load notes'; });
+
+  save.addEventListener('click', () => {
+    status.textContent = 'Saving...';
+    fetch('/api/notes', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: area.value })
+    })
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error('save failed'))))
+      .then((saved) => {
+        status.textContent = 'Saved ' + new Date(saved.savedAt).toLocaleString();
+      })
+      .catch(() => { status.textContent = 'Save failed'; });
+  });
+
   return wrap;
 }
 
@@ -101,6 +142,30 @@ function aboutBody() {
   wrap.innerHTML =
     '<p><strong>Taskbar</strong> &mdash; a desktop-style shell served by a zero-dependency Node.js server.</p>' +
     '<p>Open apps from Start, drag windows by their title bar, and use the taskbar buttons to minimize and restore them.</p>';
+
+  const facts = document.createElement('dl');
+  facts.className = 'facts';
+  wrap.appendChild(facts);
+
+  // Shows which container answered — handy when requests come through the proxy.
+  fetch('/api/config')
+    .then((res) => res.json())
+    .then((config) => {
+      [
+        ['Served by', config.host],
+        ['Node', config.node],
+        ['Data dir', config.dataDir],
+        ['Title', config.title]
+      ].forEach(([label, value]) => {
+        const dt = document.createElement('dt');
+        const dd = document.createElement('dd');
+        dt.textContent = label;
+        dd.textContent = value;
+        facts.append(dt, dd);
+      });
+    })
+    .catch(() => { facts.textContent = 'Could not load server config.'; });
+
   return wrap;
 }
 
@@ -255,6 +320,15 @@ function updateClock() {
 }
 updateClock();
 setInterval(updateClock, 1000);
+
+fetch('/api/config')
+  .then((res) => res.json())
+  .then((config) => {
+    document.title = config.title;
+    hostBadge.textContent = config.host;
+    hostBadge.title = 'Served by ' + config.host;
+  })
+  .catch(() => { hostBadge.remove(); });
 
 fetch('/api/apps')
   .then((res) => res.json())
