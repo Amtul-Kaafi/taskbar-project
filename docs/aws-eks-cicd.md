@@ -82,7 +82,7 @@ old pods retired one at a time. Failure ⇒ automatic `rollout undo`.
 
 ## The pipeline
 
-`.github/workflows/deploy.yml`, triggered by a push to `main` (documentation
+`.github/workflows/ci-cd.yml`, triggered by a push to `main` (documentation
 changes are ignored) or run by hand:
 
 The workflow has two jobs. **build** runs on every push and pull request with no

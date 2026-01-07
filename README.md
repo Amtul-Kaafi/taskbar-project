@@ -119,7 +119,7 @@ LoadBalancer Service and a `gp3` volume. `infra/` holds the eksctl cluster
 config, the ECR bootstrap script and the IAM policies for a GitHub Actions role
 that authenticates with OIDC rather than stored keys.
 
-A push to `main` runs `.github/workflows/deploy.yml`, which builds the image,
+A push to `main` runs `.github/workflows/ci-cd.yml`, which builds the image,
 tags it `<version>-<short sha>`, pushes it to ECR, applies the EKS overlay so the
 Deployment names the new image, waits for the rolling update, and rolls back
 automatically if the new pods never become ready.
@@ -147,7 +147,7 @@ Setup steps, the IAM model and the local equivalent script:
 | `k8s/base/` | Namespace, ConfigMap, PVC, Deployment, Services |
 | `k8s/overlays/eks/` | AWS differences: LoadBalancer Service, `gp3` volume |
 | `infra/` | eksctl cluster config, ECR bootstrap, IAM policies, manual push script |
-| `.github/workflows/deploy.yml` | Build, tag, push to ECR, roll out on EKS |
+| `.github/workflows/ci-cd.yml` | Build, tag, push to ECR, roll out on EKS |
 | `docs/` | Kubernetes walkthrough and the AWS/CI-CD write-up |
 | `apps.json` | The list of apps shown in the Start menu |
 | `public/` | Desktop markup, styling, and the window manager |
