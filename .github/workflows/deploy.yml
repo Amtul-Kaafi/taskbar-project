@@ -72,7 +72,7 @@ jobs:
       id-token: write
       contents: read
     env:
-      AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+      AWS_REGION: ${{ vars.AWS_REGION || 'ap-south-1' }}
       EKS_CLUSTER: ${{ vars.EKS_CLUSTER || 'taskbar-eks' }}
       TAG: ${{ needs.build.outputs.tag }}
     steps:

@@ -66,7 +66,7 @@ old pods retired one at a time. Failure ⇒ automatic `rollout undo`.
    RBAC decides what you may do:
 
    ```bash
-   eksctl create iamidentitymapping --cluster taskbar-eks --region us-east-1 \
+   eksctl create iamidentitymapping --cluster taskbar-eks --region ap-south-1 \
      --arn arn:aws:iam::ACCOUNT_ID:role/taskbar-github-actions \
      --group system:masters --username github-actions
    ```
@@ -76,7 +76,7 @@ old pods retired one at a time. Failure ⇒ automatic `rollout undo`.
    | Name | Kind | Example |
    | --- | --- | --- |
    | `DEPLOY_ENABLED` | variable | `true` — the deploy job is skipped until this is set |
-   | `AWS_REGION` | variable | `us-east-1` |
+   | `AWS_REGION` | variable | `ap-south-1` |
    | `EKS_CLUSTER` | variable | `taskbar-eks` |
    | `AWS_ROLE_ARN` | secret | `arn:aws:iam::ACCOUNT_ID:role/taskbar-github-actions` |
 

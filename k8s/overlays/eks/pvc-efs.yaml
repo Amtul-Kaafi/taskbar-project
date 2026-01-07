@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: taskbar-data
+spec:
+  # ReadWriteMany: every replica mounts the same directory, so a note saved on
+  # one pod is visible from all of them and survives a rolling update.
+  storageClassName: efs-sc
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      # EFS grows on demand; this value only satisfies the PVC schema.
+      storage: 5Gi

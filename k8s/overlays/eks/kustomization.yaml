@@ -2,7 +2,8 @@
 #   kubectl apply -k k8s/overlays/eks
 #
 # Same base as local, with the two things that differ in AWS: traffic arrives
-# through a load balancer, and the volume is backed by an EBS storage class.
+# through a load balancer, and the volume is EFS so replicas in different AZs
+# can share it.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
@@ -10,13 +11,14 @@ namespace: taskbar
 
 resources:
   - ../../base
+  - storageclass-efs.yaml
 
 patches:
   - path: service-lb.yaml
     target:
       kind: Service
       name: taskbar
-  - path: pvc-gp3.yaml
+  - path: pvc-efs.yaml
     target:
       kind: PersistentVolumeClaim
       name: taskbar-data
@@ -24,5 +26,5 @@ patches:
 # CI replaces this tag with the ECR image it just pushed.
 images:
   - name: taskbar-app
-    newName: ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/taskbar-app
+    newName: 344530147162.dkr.ecr.ap-south-1.amazonaws.com/taskbar-app
     newTag: 1.1.0

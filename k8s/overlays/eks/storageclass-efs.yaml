@@ -1,0 +1,20 @@
+# EBS is single-AZ and ReadWriteOnce, so three replicas spread across two
+# availability zones cannot share one EBS volume. EFS is a network filesystem:
+# ReadWriteMany, reachable from every AZ that has a mount target.
+#
+# provisioningMode efs-ap gives each PVC its own EFS access point, which pins
+# ownership to uid/gid 1000 — the unprivileged "node" user the image runs as.
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: efs-sc
+provisioner: efs.csi.aws.com
+parameters:
+  provisioningMode: efs-ap
+  fileSystemId: fs-079f6991f252d4720
+  directoryPerms: "700"
+  uid: "1000"
+  gid: "1000"
+  basePath: /taskbar
+reclaimPolicy: Delete
+volumeBindingMode: Immediate

@@ -20,13 +20,13 @@
         "ecr:BatchGetImage",
         "ecr:DescribeImages"
       ],
-      "Resource": "arn:aws:ecr:us-east-1:ACCOUNT_ID:repository/taskbar-app"
+      "Resource": "arn:aws:ecr:ap-south-1:ACCOUNT_ID:repository/taskbar-app"
     },
     {
       "Sid": "EksDescribe",
       "Effect": "Allow",
       "Action": "eks:DescribeCluster",
-      "Resource": "arn:aws:eks:us-east-1:ACCOUNT_ID:cluster/taskbar-eks"
+      "Resource": "arn:aws:eks:ap-south-1:ACCOUNT_ID:cluster/taskbar-eks"
     }
   ]
 }

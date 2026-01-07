@@ -3,7 +3,7 @@
 # print the values the workflow needs. Safe to re-run.
 set -euo pipefail
 
-AWS_REGION="${AWS_REGION:-us-east-1}"
+AWS_REGION="${AWS_REGION:-ap-south-1}"
 ECR_REPOSITORY="${ECR_REPOSITORY:-taskbar-app}"
 CLUSTER_NAME="${CLUSTER_NAME:-taskbar-eks}"
 
