@@ -1,0 +1,32 @@
+{
+  "Comment": "Least-privilege policy for the CI role: push images to one ECR repository and describe the EKS cluster so kubectl can be configured. Cluster-level RBAC is granted separately in the aws-auth ConfigMap / EKS access entry.",
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "EcrAuth",
+      "Effect": "Allow",
+      "Action": "ecr:GetAuthorizationToken",
+      "Resource": "*"
+    },
+    {
+      "Sid": "EcrPush",
+      "Effect": "Allow",
+      "Action": [
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:CompleteLayerUpload",
+        "ecr:InitiateLayerUpload",
+        "ecr:PutImage",
+        "ecr:UploadLayerPart",
+        "ecr:BatchGetImage",
+        "ecr:DescribeImages"
+      ],
+      "Resource": "arn:aws:ecr:us-east-1:ACCOUNT_ID:repository/taskbar-app"
+    },
+    {
+      "Sid": "EksDescribe",
+      "Effect": "Allow",
+      "Action": "eks:DescribeCluster",
+      "Resource": "arn:aws:eks:us-east-1:ACCOUNT_ID:cluster/taskbar-eks"
+    }
+  ]
+}

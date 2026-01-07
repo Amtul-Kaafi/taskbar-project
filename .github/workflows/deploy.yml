@@ -1,0 +1,99 @@
+name: build and deploy
+
+# A push to main is the trigger: build the image, tag it with the app version
+# and the commit sha, push it to ECR, then point the EKS Deployment at the new
+# tag so Kubernetes performs a rolling update.
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+  workflow_dispatch:
+
+permissions:
+  # Required to exchange the GitHub OIDC token for AWS credentials.
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+  EKS_CLUSTER: ${{ vars.EKS_CLUSTER || 'taskbar-eks' }}
+  ECR_REPOSITORY: taskbar-app
+  NAMESPACE: taskbar
+  DEPLOYMENT: taskbar
+  CONTAINER: taskbar
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Work out the image tag
+        id: meta
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          echo "tag=${VERSION}-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Assume the deployment role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Log in to ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push the image
+        id: build
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          TAG: ${{ steps.meta.outputs.tag }}
+        run: |
+          IMAGE="$REGISTRY/$ECR_REPOSITORY:$TAG"
+          docker build -t "$IMAGE" .
+          docker push "$IMAGE"
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+
+      - name: Point kubectl at the cluster
+        run: aws eks update-kubeconfig --name "$EKS_CLUSTER" --region "$AWS_REGION"
+
+      - name: Point the EKS overlay at the image just pushed
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          TAG: ${{ steps.meta.outputs.tag }}
+        run: |
+          sed -i "s|newName: .*|newName: $REGISTRY/$ECR_REPOSITORY|" k8s/overlays/eks/kustomization.yaml
+          sed -i "s|newTag: .*|newTag: $TAG|" k8s/overlays/eks/kustomization.yaml
+          kubectl kustomize k8s/overlays/eks | grep "image:"
+
+      - name: Apply manifests and trigger the rolling update
+        # Applying the overlay updates ConfigMap, Service and PVC alongside the
+        # new image; the changed pod template is what makes Kubernetes start a
+        # rolling update.
+        run: |
+          kubectl apply -k k8s/overlays/eks
+          kubectl -n "$NAMESPACE" annotate "deployment/$DEPLOYMENT" kubernetes.io/change-cause="${{ github.sha }} by ${{ github.actor }}" --overwrite
+
+      - name: Wait for the rolling update
+        # maxUnavailable: 0 means old pods only retire once new ones are ready,
+        # so a failure here leaves the previous version still serving traffic.
+        run: kubectl -n "$NAMESPACE" rollout status "deployment/$DEPLOYMENT" --timeout=5m
+
+      - name: Roll back if the update did not become ready
+        if: failure()
+        run: |
+          kubectl -n "$NAMESPACE" rollout undo "deployment/$DEPLOYMENT"
+          kubectl -n "$NAMESPACE" rollout status "deployment/$DEPLOYMENT" --timeout=5m
+          kubectl -n "$NAMESPACE" rollout history "deployment/$DEPLOYMENT"
+
+      - name: Report what is running
+        if: always()
+        run: |
+          kubectl -n "$NAMESPACE" get pods -o wide || true
+          kubectl -n "$NAMESPACE" get deployment "$DEPLOYMENT" \
+            -o jsonpath='{.spec.template.spec.containers[0].image}{"\n"}' || true

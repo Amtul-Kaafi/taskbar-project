@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: taskbar-data
+spec:
+  # Provisioned by the aws-ebs-csi-driver addon. EBS is single-AZ and
+  # ReadWriteOnce; for pods spread across AZs, switch this to an EFS class
+  # with ReadWriteMany.
+  storageClassName: gp3
+  resources:
+    requests:
+      storage: 5Gi

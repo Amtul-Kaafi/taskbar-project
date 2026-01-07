@@ -1,0 +1,21 @@
+{
+  "Comment": "Trust policy for the IAM role GitHub Actions assumes. No long-lived AWS keys are stored in the repository; the workflow exchanges its OIDC token for short-lived credentials. Replace ACCOUNT_ID and the repo path before use.",
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Federated": "arn:aws:iam::ACCOUNT_ID:oidc-provider/token.actions.githubusercontent.com"
+      },
+      "Action": "sts:AssumeRoleWithWebIdentity",
+      "Condition": {
+        "StringEquals": {
+          "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
+        },
+        "StringLike": {
+          "token.actions.githubusercontent.com:sub": "repo:Amtul-Kaafi/taskbar-project:ref:refs/heads/main"
+        }
+      }
+    }
+  ]
+}
