@@ -1,0 +1,34 @@
+# Stable in-cluster address. The selector, not an IP, decides which pods get
+# traffic, so pods can come and go during a rollout without the address moving.
+apiVersion: v1
+kind: Service
+metadata:
+  name: taskbar
+  labels:
+    app.kubernetes.io/name: taskbar
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: taskbar
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+# Local browsing convenience. On EKS this becomes a LoadBalancer service or an
+# Ingress fronted by the AWS Load Balancer Controller.
+apiVersion: v1
+kind: Service
+metadata:
+  name: taskbar-nodeport
+  labels:
+    app.kubernetes.io/name: taskbar
+spec:
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: taskbar
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      nodePort: 30080

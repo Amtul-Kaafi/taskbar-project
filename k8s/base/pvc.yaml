@@ -1,0 +1,15 @@
+# Notes survive pod restarts and rollouts because they live here, not in the
+# container filesystem. ReadWriteOnce is enough on a single node; on EKS across
+# several AZs use EFS (ReadWriteMany) or give each pod its own volume.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: taskbar-data
+  labels:
+    app.kubernetes.io/name: taskbar
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi

@@ -1,0 +1,22 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: taskbar
+
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - pvc.yaml
+  - deployment.yaml
+  - service.yaml
+
+labels:
+  - includeSelectors: false
+    pairs:
+      app.kubernetes.io/part-of: taskbar
+
+# CI rewrites this tag, so the deployed image is always an explicit version
+# rather than a floating :latest.
+images:
+  - name: taskbar-app
+    newTag: 1.1.0

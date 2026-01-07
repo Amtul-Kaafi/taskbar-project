@@ -1,0 +1,14 @@
+# Runtime configuration, kept out of the image so one image serves every
+# environment. Changing a value here needs a rollout to take effect:
+#   kubectl -n taskbar rollout restart deployment/taskbar
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: taskbar-config
+  labels:
+    app.kubernetes.io/name: taskbar
+data:
+  PORT: "3000"
+  HOST: 0.0.0.0
+  DATA_DIR: /data
+  TASKBAR_TITLE: Taskbar on Kubernetes
