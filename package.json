@@ -1,6 +1,6 @@
 {
   "name": "taskbar-project",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "A simple desktop-style taskbar served by a zero-dependency Node.js server",
   "main": "server.js",
   "scripts": {
