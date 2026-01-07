@@ -152,6 +152,7 @@ function aboutBody() {
     .then((res) => res.json())
     .then((config) => {
       [
+        ['Version', config.version],
         ['Served by', config.host],
         ['Node', config.node],
         ['Data dir', config.dataDir],

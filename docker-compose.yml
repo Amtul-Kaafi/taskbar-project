@@ -6,7 +6,7 @@ services:
   web:
     build:
       context: .
-    image: taskbar-app:1.0.0
+    image: taskbar-app:1.1.0
     container_name: taskbar-web
     restart: unless-stopped
     env_file:

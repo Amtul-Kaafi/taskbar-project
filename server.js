@@ -13,6 +13,7 @@ const HOST = process.env.HOST || '0.0.0.0';
 const TITLE = process.env.TASKBAR_TITLE || 'Taskbar';
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 const APPS_FILE = process.env.APPS_FILE || path.join(__dirname, 'apps.json');
+const VERSION = process.env.APP_VERSION || require('./package.json').version;
 
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const NOTES_FILE = path.join(DATA_DIR, 'notes.json');
@@ -86,6 +87,7 @@ async function handleApi(req, res, pathname) {
   if (pathname === '/api/health') {
     return sendJson(res, 200, {
       status: 'ok',
+      version: VERSION,
       host: os.hostname(),
       uptime: Math.round(process.uptime())
     });
@@ -94,6 +96,7 @@ async function handleApi(req, res, pathname) {
   if (pathname === '/api/config') {
     return sendJson(res, 200, {
       title: TITLE,
+      version: VERSION,
       host: os.hostname(),
       dataDir: DATA_DIR,
       node: process.version
@@ -166,7 +169,7 @@ fsp.mkdir(DATA_DIR, { recursive: true })
   .catch((err) => console.error(`Could not create ${DATA_DIR}: ${err.message}`))
   .then(() => {
     server.listen(PORT, HOST, () => {
-      console.log(`${TITLE} listening on http://${HOST}:${PORT} — host ${os.hostname()}, data ${DATA_DIR}`);
+      console.log(`${TITLE} v${VERSION} listening on http://${HOST}:${PORT} — host ${os.hostname()}, data ${DATA_DIR}`);
     });
   });
 
