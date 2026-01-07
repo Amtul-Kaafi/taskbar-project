@@ -1,5 +1,5 @@
 {
-  "Comment": "Trust policy for the IAM role GitHub Actions assumes. No long-lived AWS keys are stored in the repository; the workflow exchanges its OIDC token for short-lived credentials. Replace ACCOUNT_ID and the repo path before use.",
+  "Comment": "Trust policy for the IAM role GitHub Actions assumes. No long-lived AWS keys are stored in the repository; the workflow exchanges its OIDC token for short-lived credentials. NOTE: GitHub issues subject claims containing immutable numeric IDs (repo:OWNER@OWNERID/REPO@REPOID:ref:...), not the plain repo:OWNER/REPO:ref:... form most guides show; a policy written the plain way is denied with AccessDenied. Read the real claim from CloudTrail (AssumeRoleWithWebIdentity, userIdentity.principalId) and paste it below. Replace ACCOUNT_ID before use.",
   "Version": "2012-10-17",
   "Statement": [
     {
@@ -13,7 +13,7 @@
           "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
         },
         "StringLike": {
-          "token.actions.githubusercontent.com:sub": "repo:Amtul-Kaafi/taskbar-project:ref:refs/heads/main"
+          "token.actions.githubusercontent.com:sub": "repo:Amtul-Kaafi@148440954/taskbar-project@1360546420:ref:refs/heads/main"
         }
       }
     }
