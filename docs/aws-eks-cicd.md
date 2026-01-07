@@ -75,6 +75,7 @@ old pods retired one at a time. Failure ⇒ automatic `rollout undo`.
 
    | Name | Kind | Example |
    | --- | --- | --- |
+   | `DEPLOY_ENABLED` | variable | `true` — the deploy job is skipped until this is set |
    | `AWS_REGION` | variable | `us-east-1` |
    | `EKS_CLUSTER` | variable | `taskbar-eks` |
    | `AWS_ROLE_ARN` | secret | `arn:aws:iam::ACCOUNT_ID:role/taskbar-github-actions` |
@@ -84,7 +85,13 @@ old pods retired one at a time. Failure ⇒ automatic `rollout undo`.
 `.github/workflows/deploy.yml`, triggered by a push to `main` (documentation
 changes are ignored) or run by hand:
 
-| Step | What it does |
+The workflow has two jobs. **build** runs on every push and pull request with no
+AWS involvement: it builds the image, starts the container and waits on
+`/api/health` the way the readiness probe does, then renders both kustomize
+trees to catch a broken manifest. **deploy** needs `build` to pass and only runs
+when `DEPLOY_ENABLED` is set, so the pipeline stays green before AWS exists.
+
+| Step (deploy) | What it does |
 | --- | --- |
 | Work out the image tag | `<package.json version>-<7-char sha>`, e.g. `1.1.0-a1efcf4` — never `latest`, so every deploy is traceable to a commit |
 | Assume the deployment role | OIDC token exchanged for short-lived AWS credentials |

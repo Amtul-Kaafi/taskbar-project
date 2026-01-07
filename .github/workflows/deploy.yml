@@ -1,45 +1,86 @@
 name: build and deploy
 
-# A push to main is the trigger: build the image, tag it with the app version
-# and the commit sha, push it to ECR, then point the EKS Deployment at the new
-# tag so Kubernetes performs a rolling update.
+# A push to main is the trigger: build and smoke test the image, then — once the
+# AWS side is configured — push it to ECR and let Kubernetes roll it out on EKS.
 on:
   push:
     branches: [main]
     paths-ignore:
       - "**.md"
       - "docs/**"
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
-  # Required to exchange the GitHub OIDC token for AWS credentials.
-  id-token: write
   contents: read
 
 env:
-  AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
-  EKS_CLUSTER: ${{ vars.EKS_CLUSTER || 'taskbar-eks' }}
   ECR_REPOSITORY: taskbar-app
   NAMESPACE: taskbar
   DEPLOYMENT: taskbar
   CONTAINER: taskbar
 
 jobs:
-  build-and-deploy:
+  # Runs on every push and pull request: no AWS involved.
+  build:
     runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
     steps:
       - name: Check out
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Work out the image tag
         id: meta
         run: |
           VERSION="$(node -p "require('./package.json').version")"
           echo "tag=${VERSION}-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
-          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Build the image
+        run: docker build -t "taskbar-app:${{ steps.meta.outputs.tag }}" .
+
+      - name: Smoke test the image
+        # Start the container the way Kubernetes will and wait on the same
+        # endpoint the readiness probe uses.
+        run: |
+          docker run -d --name smoke -p 3000:3000 "taskbar-app:${{ steps.meta.outputs.tag }}"
+          for i in $(seq 1 20); do
+            if curl -fsS http://localhost:3000/api/health > /tmp/health.json; then
+              cat /tmp/health.json; echo
+              break
+            fi
+            sleep 1
+          done
+          test -s /tmp/health.json
+          curl -fsS http://localhost:3000/api/apps > /dev/null
+          docker rm -f smoke
+
+      - name: Validate the manifests
+        run: |
+          kubectl kustomize k8s/base > /dev/null
+          kubectl kustomize k8s/overlays/eks > /dev/null
+
+  # Runs only once AWS is wired up: set the repository variable
+  # DEPLOY_ENABLED=true alongside AWS_REGION, EKS_CLUSTER and AWS_ROLE_ARN.
+  deploy:
+    needs: build
+    if: ${{ github.event_name != 'pull_request' && vars.DEPLOY_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      # Required to exchange the GitHub OIDC token for AWS credentials.
+      id-token: write
+      contents: read
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+      EKS_CLUSTER: ${{ vars.EKS_CLUSTER || 'taskbar-eks' }}
+      TAG: ${{ needs.build.outputs.tag }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@v5
 
       - name: Assume the deployment role
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v5
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
@@ -49,15 +90,12 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build and push the image
-        id: build
         env:
           REGISTRY: ${{ steps.ecr.outputs.registry }}
-          TAG: ${{ steps.meta.outputs.tag }}
         run: |
           IMAGE="$REGISTRY/$ECR_REPOSITORY:$TAG"
           docker build -t "$IMAGE" .
           docker push "$IMAGE"
-          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
 
       - name: Point kubectl at the cluster
         run: aws eks update-kubeconfig --name "$EKS_CLUSTER" --region "$AWS_REGION"
@@ -65,7 +103,6 @@ jobs:
       - name: Point the EKS overlay at the image just pushed
         env:
           REGISTRY: ${{ steps.ecr.outputs.registry }}
-          TAG: ${{ steps.meta.outputs.tag }}
         run: |
           sed -i "s|newName: .*|newName: $REGISTRY/$ECR_REPOSITORY|" k8s/overlays/eks/kustomization.yaml
           sed -i "s|newTag: .*|newTag: $TAG|" k8s/overlays/eks/kustomization.yaml
