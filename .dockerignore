@@ -7,4 +7,8 @@ data
 Dockerfile
 docker-compose.yml
 nginx
+k8s
+infra
+docs
+.github
 README.md
