@@ -6,7 +6,6 @@ data
 .env
 Dockerfile
 docker-compose.yml
-nginx
 k8s
 infra
 docs

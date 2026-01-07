@@ -1,8 +1,6 @@
 name: taskbar
 
 services:
-  # The Node app. Not the entry point for users: traffic normally arrives
-  # through the proxy, which reaches this service by its name on taskbar-net.
   web:
     build:
       context: .
@@ -18,15 +16,12 @@ services:
       DATA_DIR: /data
       TASKBAR_TITLE: ${TASKBAR_TITLE:-Taskbar}
     ports:
-      # Published for direct access; the proxy does not need this line.
       - "${APP_PORT:-3000}:3000"
     volumes:
       # Named volume: notes written to /data outlive the container.
       - taskbar-data:/data
       # Bind mount: edit apps.json on the host, restart, new Start menu.
       - ./apps.json:/app/apps.json:ro
-    networks:
-      - taskbar-net
     healthcheck:
       test:
         - CMD
@@ -37,31 +32,6 @@ services:
       timeout: 3s
       retries: 3
       start_period: 5s
-
-  # Reverse proxy. Reaches the app as http://web:3000 over the user-defined
-  # bridge network, using Docker's built-in DNS for the service name.
-  proxy:
-    image: nginx:1.27-alpine
-    container_name: taskbar-proxy
-    restart: unless-stopped
-    depends_on:
-      web:
-        condition: service_healthy
-    ports:
-      - "${PROXY_PORT:-8080}:80"
-    volumes:
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
-    networks:
-      - taskbar-net
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
-      interval: 10s
-      timeout: 3s
-      retries: 3
-
-networks:
-  taskbar-net:
-    driver: bridge
 
 volumes:
   taskbar-data:

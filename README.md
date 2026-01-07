@@ -1,12 +1,12 @@
 # taskbar-project
 
 A simple desktop-style **taskbar** application built on Node.js — no npm dependencies, no build step —
-packaged as a Docker image, run as a two-service stack with Docker Compose, and deployed to
-Kubernetes (locally and on EKS) by a GitHub Actions pipeline.
+packaged as a Docker image, run with Docker Compose, and deployed to Kubernetes (locally and
+on EKS) by a GitHub Actions pipeline.
 
 A small Node HTTP server serves a browser desktop shell: a Start menu, draggable app windows,
-per-window taskbar buttons with minimize/restore, and a live clock in the tray. An nginx reverse
-proxy sits in front of it on a user-defined bridge network, and notes are persisted to a named volume.
+per-window taskbar buttons with minimize/restore, and a live clock in the tray. Notes are
+persisted to a named volume, so they survive the container being replaced.
 
 ## Run with Docker Compose
 
@@ -16,10 +16,8 @@ docker compose up -d --build
 
 | URL | What it is |
 | --- | --- |
-| <http://localhost:8080> | Through the nginx reverse proxy (the normal entry point) |
-| <http://localhost:3000> | Straight at the app container |
-| <http://localhost:8080/healthz> | Proxy liveness, answered by nginx itself |
-| <http://localhost:3000/api/health> | App health, used by the container healthcheck |
+| <http://localhost:3000> | The app |
+| <http://localhost:3000/api/health> | Health JSON, used by the container healthcheck |
 
 Stop the stack, keeping saved notes:
 
@@ -42,17 +40,14 @@ npm start
 ## Container layout
 
 ```
-host :8080 ──> proxy (nginx)  ──┐
-host :3000 ─────────────────────┴──> web (node) ──> taskbar-data volume at /data
-                    taskbar-net (bridge)
+host :3000 ──> web (node) ──> taskbar-data volume at /data
 ```
 
-- **web** — the Node app, built from the `Dockerfile`, published as `taskbar-app:1.0.0`.
+- **web** — the Node app, built from the `Dockerfile`, published as `taskbar-app:1.1.0`.
   Runs as the unprivileged `node` user with a `HEALTHCHECK` against `/api/health`.
-- **proxy** — `nginx:1.27-alpine`, reaching the app as `http://web:3000`. The hostname `web`
-  resolves through Docker's embedded DNS on `taskbar-net`; nothing is hard-coded to an IP.
-- **taskbar-net** — a user-defined bridge network, so the two services can talk by service name.
-- `depends_on: condition: service_healthy` holds the proxy back until the app passes its healthcheck.
+- **taskbar-data** — a named volume mounted at `/data`. Notes live there, not in the container's
+  own filesystem, so `docker compose down` and back up keeps them.
+- `apps.json` is bind-mounted read-only, so editing it on the host changes the Start menu.
 
 ## Environment configuration
 
@@ -65,7 +60,6 @@ cp .env.example .env
 | Variable | Default | Effect |
 | --- | --- | --- |
 | `APP_PORT` | `3000` | Host port mapped to the app container |
-| `PROXY_PORT` | `8080` | Host port mapped to nginx |
 | `TASKBAR_TITLE` | `Taskbar` | Browser tab title, reported by `GET /api/config` |
 | `PORT` | `3000` | Port the Node server binds inside the container |
 | `HOST` | `0.0.0.0` | Bind address — must not be `127.0.0.1` in a container |
@@ -149,8 +143,7 @@ Setup steps, the IAM model and the local equivalent script:
 | --- | --- |
 | `server.js` | Zero-dependency HTTP server: static files, JSON API, graceful SIGTERM |
 | `Dockerfile` | Image build: `node:22-alpine`, non-root user, healthcheck |
-| `docker-compose.yml` | Two services, one bridge network, one named volume |
-| `nginx/default.conf` | Reverse proxy to `web:3000`, plus `/healthz` |
+| `docker-compose.yml` | One service, one named volume, one bind mount |
 | `k8s/base/` | Namespace, ConfigMap, PVC, Deployment, Services |
 | `k8s/overlays/eks/` | AWS differences: LoadBalancer Service, `gp3` volume |
 | `infra/` | eksctl cluster config, ECR bootstrap, IAM policies, manual push script |
