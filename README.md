@@ -8,6 +8,21 @@ A small Node HTTP server serves a browser desktop shell: a Start menu, draggable
 per-window taskbar buttons with minimize/restore, and a live clock in the tray. Notes are
 persisted to a named volume, so they survive the container being replaced.
 
+## New to this? Start here
+
+[`docs/learn/`](docs/learn/README.md) walks through the whole project in seven short
+modules — what each file does, line by line, and what to say when someone asks about it.
+
+| Module | Covers |
+| --- | --- |
+| [00 Overview](docs/learn/00-overview.md) | Why each layer exists |
+| [01 The app](docs/learn/01-the-app.md) | `server.js` and the API |
+| [02 Dockerfile](docs/learn/02-dockerfile.md) | Every line of the image build |
+| [03 Compose](docs/learn/03-compose.md) | Ports, env vars, volumes |
+| [04 Kubernetes](docs/learn/04-kubernetes-local.md) | Deployments, Services, rollouts, rollbacks |
+| [05 CI/CD](docs/learn/05-cicd.md) | The GitHub Actions pipeline |
+| [06 AWS](docs/learn/06-aws.md) | ECR, EKS, and what broke |
+
 ## Run with Docker Compose
 
 ```bash
